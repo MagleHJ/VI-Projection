@@ -31,7 +31,14 @@ def F(x):
     return ret
 
 from Projection import Projection
+import pickle
 
-algo = Projection(0.5, 0.5)
+algo = Projection(0.5, 0.5, max_iter=1e5)
 start = np.zeros(25)
 print(algo.run(F, start))
+print(algo.step)
+algo.dump()
+#
+# algo = Projection(0.5, 0.5, max_iter=1e4)
+# start = np.zeros(25)
+# print(algo.run(F, start))

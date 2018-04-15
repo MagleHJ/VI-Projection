@@ -1,7 +1,4 @@
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import math
 
 def L2_norm(x):
     return np.linalg.norm(x)
@@ -32,7 +29,7 @@ class Projection:
     def __init__(self,gamma, 
                     delta, 
                     error = 1e-6, 
-                    max_iter = 1e4):
+                    max_iter = 1e5):
         self.gamma = gamma
         self.delta = delta
         self.error = error
@@ -56,28 +53,18 @@ class Projection:
         self.alpha = [None, ]
         self.beta = [None, ]
         self.step = 0
-        while math.fabs(self.R(self.X[-1])) > self.error and self.step < self.max_iter:
+        while self.step < self.max_iter:
             self.update(self.X[-1])
+            self.step += 1
         return self.X[-1]
 
     def update(self, x):
         F = self.F
-        R = self.R
         P = self.P
-        # Search m
-        m = 0
-        while True:
-            beta_ = self.gamma ** m
-            tmp1 = F(x - beta_ * R(x)).dot(R(x))
-            tmp2 = self.delta * (L2_norm(R(x)) ** 2)
-            if tmp1 >= tmp2:
-                break
-            else:
-                m += 1
-
         z = P(x - F(x))
-        beta = self.gamma ** m
-        y = (1 - beta) * x + beta * z
+
+        m, beta,  y = self.search_m(x, z)
+
         alpha = F(y).dot(x - y) / (L2_norm(y) ** 2)
         x_new = P(x - alpha * F(y))
 
@@ -88,10 +75,30 @@ class Projection:
         self.alpha.append(alpha)
         self.X.append(x_new)
 
+    def search_m(self, x, z):
+        m = 0
+        while True:
+            beta = self.gamma ** m
+            y = (1 - beta) * x + beta * z
+            f = self.F(y)
+            e = x - self.P(x - self.F(x))
+            if f.dot(e) >= self.delta * (L2_norm(e) ** 2):
+                break
+            else:
+                m += 1
+        return beta, m, y
+
     def P(self, x):
         x_ = x.copy()
         x_[x_ < 0] = 0
         return x_
 
-    def R(self, x):
-        return x - self.P(x - self.F(x))
+    def dump(self, filename="log"):
+        import pickle
+        with open(filename, "wb") as file:
+            pickle.dump(self.M, file)
+            pickle.dump(self.Z, file)
+            pickle.dump(self.beta, file)
+            pickle.dump(self.Y, file)
+            pickle.dump(self.alpha, file)
+            pickle.dump(self.X, file)
